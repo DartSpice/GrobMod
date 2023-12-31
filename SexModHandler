@@ -1,0 +1,127 @@
+package ua.grobsex.main;
+
+
+import java.lang.reflect.Method;
+
+import cpw.mods.fml.common.eventhandler.SubscribeEvent;
+import cpw.mods.fml.common.gameevent.TickEvent;
+import cpw.mods.fml.relauncher.Side;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.RenderGlobal;
+import net.minecraft.entity.monster.EntitySkeleton;
+import net.minecraft.entity.monster.EntitySpider;
+import net.minecraft.entity.monster.EntityZombie;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.world.World;
+import net.minecraft.world.WorldServer;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.monster.EntityZombie;
+import net.minecraft.world.WorldServer;
+import net.minecraft.world.EnumDifficulty;
+
+import java.util.Random;
+
+
+public class SexModHandler {
+    private boolean eclipseActive = false;
+
+    @SubscribeEvent
+    public void onWorldTick(TickEvent.WorldTickEvent event) {
+        if (event.side == Side.SERVER && event.phase == TickEvent.Phase.END) {
+            World world = event.world;
+
+            if (world instanceof WorldServer) {
+                WorldData worldData = WorldData.get((WorldServer) world);
+
+                if (worldData != null) {
+                    if (worldData.shouldStartEclipse()) {
+                        startEclipse();
+                        spawnMobsDuringEclipse((WorldServer) world);
+                    }
+                }
+
+                if (eclipseActive && world.getWorldTime() % 24000 < 12000) {
+                    endEclipse();
+                }
+            }
+        }
+    }
+    
+    private static final Random rand = new Random();
+
+    public static void spawnMobsDuringEclipse(WorldServer worldServer) {
+        int spawnMultiplier = worldServer.difficultySetting == EnumDifficulty.HARD ? 3 : 1;
+
+        for (int i = 0; i < 5 * spawnMultiplier; i++) {
+            EntityZombie zombie = new EntityZombie(worldServer);
+            placeEntityInRandomLocation(zombie, worldServer);
+            worldServer.spawnEntityInWorld(zombie);
+            
+            EntitySkeleton skeleton = new EntitySkeleton(worldServer);
+            placeEntityInRandomLocation(skeleton, worldServer);
+            worldServer.spawnEntityInWorld(skeleton);
+            
+            EntitySpider spider = new EntitySpider(worldServer);
+            placeEntityInRandomLocation(spider, worldServer);
+            worldServer.spawnEntityInWorld(spider);
+        }
+    }
+
+    private static void placeEntityInRandomLocation(EntityLivingBase entity, WorldServer worldServer) {
+        double x = rand.nextDouble() * 50;
+        double y = 64;
+        double z = rand.nextDouble() * 50;
+        float yaw = rand.nextFloat() * 360;
+        entity.setPositionAndRotation(x, y, z, yaw, 0);
+    }
+
+
+    private void startEclipse() {
+        eclipseActive = true;
+
+        // Логика для начала затмения
+        setEclipseMoonTexture();
+    }
+
+    private void endEclipse() {
+        eclipseActive = false;
+
+        // Логика для окончания затмения
+        restoreDefaultMoonTexture();
+    }
+
+    private void setEclipseMoonTexture() {
+        try {
+            // Замените "grobsex" и "new_moon_texture" на свои значения
+            ResourceLocation newMoonTexture = new ResourceLocation("grobsex:textures/sky/moon_eclipse.png");
+
+            // Получаем объект RenderGlobal через reflection
+            RenderGlobal renderGlobal = Minecraft.getMinecraft().renderGlobal;
+
+            // Получаем поле moonPhases через reflection и устанавливаем новую текстуру луны
+            Method setMoonTextureMethod = RenderGlobal.class.getDeclaredMethod("setMoonTexture", ResourceLocation.class);
+            setMoonTextureMethod.setAccessible(true);
+            setMoonTextureMethod.invoke(renderGlobal, newMoonTexture);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void restoreDefaultMoonTexture() {
+        try {
+            // Замените "textures/environment/moon_phases.png" на путь к оригинальному файлу лунных фаз
+            ResourceLocation defaultMoonTexture = new ResourceLocation("textures/environment/moon_phases.png");
+
+            // Получаем объект RenderGlobal через reflection
+            RenderGlobal renderGlobal = Minecraft.getMinecraft().renderGlobal;
+
+            // Получаем поле moonPhases через reflection и восстанавливаем стандартную текстуру луны
+            Method setMoonTextureMethod = RenderGlobal.class.getDeclaredMethod("setMoonTexture", ResourceLocation.class);
+            setMoonTextureMethod.setAccessible(true);
+            setMoonTextureMethod.invoke(renderGlobal, defaultMoonTexture);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
